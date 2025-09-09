@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Minimal custom tweaks for readability, placed in the base layer */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+}
