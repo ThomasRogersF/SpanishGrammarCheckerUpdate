@@ -92,7 +92,7 @@ RESPONSE FORMAT (IMPORTANT)
 
 GUIDELINES
 - Keep the user's meaning; only fix actual errors in CORRECTION.
-- Types: spelling, grammar, punctuation, agreement, accent, diacritic, other.
+- Types: Use ONLY these exact English strings: "spelling", "grammar", "punctuation", "agreement", "accent", "diacritic", "other". Do not use Spanish translations or other values.
 - Explanations: brief, rule-based, in English.
 - Fluency alternatives may be empty if already natural.
 
