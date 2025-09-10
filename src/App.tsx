@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import HighlightedPreview from './components/HighlightedPreview';
+import { normalizeForCanonical } from './utils/text';
 
 type Correction = {
   start: number; end: number; original: string; suggestion: string;
@@ -34,13 +36,30 @@ export default function App() {
   const [coolingUntil, setCoolingUntil] = useState<number>(0);
   const [error, setError] = useState<string|null>(null);
   const [result, setResult] = useState<CheckResponse|null>(null);
+  const [submittedText, setSubmittedText] = useState<string|null>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const now = Date.now();
   const cooling = useMemo(() => now < coolingUntil, [now, coolingUntil]);
 
+  // Canonical string from server (source of truth for highlighting). Fallback to client-side normalization of submittedText.
+  const canonical = useMemo(() => {
+    const metaCanon = (result as any)?.meta?.canonical_text as string | undefined;
+    if (metaCanon) return metaCanon;
+    const snap = submittedText ?? text;
+    return normalizeForCanonical(snap);
+  }, [result, submittedText, text]);
+
+  // Drift indicator: live textarea (normalized) differs from canonical returned by server
+  const drift = useMemo(() => !!result && normalizeForCanonical(text) !== canonical, [result, text, canonical]);
+
+  // Only select in textarea when raw text exactly equals canonical (avoids index shift from CRLF -> LF)
+  const rawMatchesCanonical = useMemo(() => text === canonical, [text, canonical]);
+
   const onCheck = async () => {
     if (loading || cooling || !text.trim()) return;
     setError(null); setLoading(true);
+    setSubmittedText(text);
     try {
       const ctrl = new AbortController();
       const data = await checkGrammar(text, ctrl.signal);
@@ -55,6 +74,48 @@ export default function App() {
     }
   };
 
+  const onIssueClick = (i: number) => {
+    const id = `issue-${i}`;
+    const el = document.getElementById(id) as HTMLElement | null;
+    if (el) {
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+      const prevOutline = el.style.outline;
+      el.style.outline = '2px solid rgba(255,255,255,0.6)';
+      setTimeout(() => { el.style.outline = prevOutline; }, 700);
+    }
+    // Select same span in textarea only if raw text matches canonical exactly (avoids CRLF/LF index drift)
+    const c = result?.corrections?.[i];
+    if (c && rawMatchesCanonical && textAreaRef.current) {
+      try {
+        textAreaRef.current.focus();
+        textAreaRef.current.setSelectionRange(c.start, c.end);
+      } catch {}
+    }
+  };
+
+  // Runtime invariant checks for indices against canonical string
+  useEffect(() => {
+    if (!result || !canonical) return;
+    const corr = result.corrections || [];
+    const len = canonical.length;
+    for (let i = 0; i < corr.length; i++) {
+      const c = corr[i];
+      if (!(Number.isInteger(c.start) && Number.isInteger(c.end) && c.start >= 0 && c.end >= c.start && c.end <= len)) {
+        // eslint-disable-next-line no-console
+        console.warn('Span out of bounds', { i, c, len });
+      }
+      if (i > 0 && c.start < corr[i - 1].end) {
+        // eslint-disable-next-line no-console
+        console.warn('Overlapping spans', { prev: corr[i - 1], curr: c });
+      }
+      const sub = canonical.slice(c.start, c.end);
+      if (sub !== c.original) {
+        // eslint-disable-next-line no-console
+        console.warn('Original mismatch', { i, start: c.start, end: c.end, expected: c.original, got: sub });
+      }
+    }
+  }, [result, canonical]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto max-w-5xl p-6 space-y-6">
@@ -67,6 +128,7 @@ export default function App() {
           <div className="space-y-3">
             <label className="text-sm text-slate-300">Paste Spanish text</label>
             <textarea
+              ref={textAreaRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
               maxLength={3000}
@@ -84,6 +146,31 @@ export default function App() {
               <span className="text-xs text-slate-400">{text.length}/3000</span>
             </div>
             {error && <div className="text-sm text-red-400">{error}</div>}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold">Highlighted Preview</h2>
+                {drift && (
+                  <span className="text-[10px] text-amber-300 px-1.5 py-0.5 border border-amber-500/40 rounded">
+                    Text changed — recheck to refresh highlights
+                  </span>
+                )}
+              </div>
+              <div className="min-h-24 p-3 rounded-md bg-slate-900 border border-slate-700">
+                {result?.corrections?.length
+                  ? <HighlightedPreview textNFC={canonical} corrections={result.corrections as any} />
+                  : <span className="text-slate-400 text-sm">{text.trim() ? 'No issues to highlight.' : '—'}</span>
+                }
+              </div>
+              <div className="flex flex-wrap gap-2 text-[11px] text-slate-300">
+                <span className="px-1 rounded bg-red-500/30 underline decoration-red-400">spelling</span>
+                <span className="px-1 rounded bg-yellow-500/30 underline decoration-yellow-400">grammar</span>
+                <span className="px-1 rounded bg-blue-500/30 underline decoration-blue-400">punctuation</span>
+                <span className="px-1 rounded bg-purple-500/30 underline decoration-purple-400">agreement</span>
+                <span className="px-1 rounded bg-emerald-500/30 underline decoration-emerald-400">accent</span>
+                <span className="px-1 rounded bg-pink-500/30 underline decoration-pink-400">diacritic</span>
+                <span className="px-1 rounded bg-slate-500/30 underline decoration-slate-400">other</span>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -113,7 +200,7 @@ export default function App() {
           <div className="grid gap-2 md:grid-cols-2">
             {result?.corrections?.length
               ? result.corrections.map((c, i) => (
-                  <div key={i} className="border border-slate-700 rounded-md p-2">
+                  <div key={i} onClick={() => onIssueClick(i)} className="border border-slate-700 rounded-md p-2 cursor-pointer hover:bg-slate-800">
                     <div className="text-xs text-slate-400">{c.type.toUpperCase()} • {Math.round((c.confidence ?? 0)*100)}%</div>
                     <div><strong>{c.original}</strong> → <span className="text-emerald-300">{c.suggestion}</span></div>
                     <div className="text-xs text-slate-400">{c.explanation_en}</div>
