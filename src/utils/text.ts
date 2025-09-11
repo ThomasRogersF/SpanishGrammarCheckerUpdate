@@ -16,10 +16,21 @@ export function unifyEOL(s: string): string {
 }
 
 /**
+ * Replace NBSP and tabs with regular spaces to mirror server canonicalization.
+ * - NBSP (U+00A0) -> ' '
+ * - Tab -> ' '
+ */
+export function normalizeSpaces(s: string): string {
+  try { return (s ?? '').replace(/\u00A0/g, ' ').replace(/\t/g, ' '); } catch { return s ?? ''; }
+}
+
+/**
  * Canonical client-side normalization pipeline to mirror the server:
- * 1) EOL unification to LF
- * 2) NFC normalization
+ * 1) EOL -> LF
+ * 2) NBSP -> space
+ * 3) tabs -> space
+ * 4) NFC
  */
 export function normalizeForCanonical(s: string): string {
-  return normalizeToNFC(unifyEOL(s ?? ''));
+  return normalizeToNFC(normalizeSpaces(unifyEOL(s ?? '')));
 }

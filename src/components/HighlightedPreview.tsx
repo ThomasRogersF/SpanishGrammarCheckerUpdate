@@ -69,13 +69,15 @@ export type HighlightedPreviewProps = {
   corrections?: CorrectionLite[];
   idPrefix?: string; // default: 'issue-'
   className?: string;
+  // Optional titles for each correction index (by original array index before internal sort)
+  titlesByIndex?: string[];
 };
 
 /**
  * Render normalized text with highlighted spans for each correction.
  * Preserves whitespace and wraps long lines for readability.
  */
-export default function HighlightedPreview({ textNFC, corrections = [], idPrefix = 'issue-', className = '' }: HighlightedPreviewProps) {
+export default function HighlightedPreview({ textNFC, corrections = [], idPrefix = 'issue-', className = '', titlesByIndex }: HighlightedPreviewProps) {
   const segments = useMemo(() => computeSegments(textNFC || '', corrections), [textNFC, corrections]);
 
   return (
@@ -91,6 +93,7 @@ export default function HighlightedPreview({ textNFC, corrections = [], idPrefix
             key={idx}
             id={`${idPrefix}${seg.originalIndex}`}
             className={`rounded-sm px-0.5 ${issueTypeClass(seg.type)}`}
+            title={titlesByIndex?.[seg.originalIndex] || undefined}
           >
             {slice}
           </span>

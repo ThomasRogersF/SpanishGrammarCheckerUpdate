@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import HighlightedPreview from './components/HighlightedPreview';
 import { normalizeForCanonical } from './utils/text';
+import { buildDiffHighlights } from './utils/diff';
 
 type Correction = {
   start: number; end: number; original: string; suggestion: string;
@@ -38,6 +39,7 @@ export default function App() {
   const [result, setResult] = useState<CheckResponse|null>(null);
   const [submittedText, setSubmittedText] = useState<string|null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  // legacy highlightMode removed – diff is the only path
 
   const now = Date.now();
   const cooling = useMemo(() => now < coolingUntil, [now, coolingUntil]);
@@ -53,8 +55,37 @@ export default function App() {
   // Drift indicator: live textarea (normalized) differs from canonical returned by server
   const drift = useMemo(() => !!result && normalizeForCanonical(text) !== canonical, [result, text, canonical]);
 
-  // Only select in textarea when raw text exactly equals canonical (avoids index shift from CRLF -> LF)
-  const rawMatchesCanonical = useMemo(() => text === canonical, [text, canonical]);
+  // Selection allowed only when normalized live text equals canonical (prevents drift)
+  const matchesCanonicalNormalized = useMemo(() => normalizeForCanonical(text) === canonical, [text, canonical]);
+
+  // Diff-based highlights and mappings (production path)
+  const diffData = useMemo(() => {
+    if (!result || !result.corrected_text) return null;
+    const issues = (result.corrections || []).map((c) => ({
+      original: c.original,
+      suggestion: c.suggestion,
+      type: c.type as any,
+      explanation_en: c.explanation_en,
+      confidence: c.confidence ?? 0
+    }));
+    return buildDiffHighlights(canonical, result.corrected_text, issues);
+  }, [result, canonical]);
+
+  // Optional titles for tooltips on diff highlights
+  const diffTitles = useMemo(() => {
+    if (!diffData) return undefined;
+    const corrs = result?.corrections || [];
+    const titles: (string | undefined)[] = diffData.spans.map((_, hunkId) => {
+      const issueIdxs = diffData.hunkToIssues[hunkId] || [];
+      if (!issueIdxs.length) return undefined;
+      const types = Array.from(new Set(issueIdxs.map(i => corrs[i]?.type).filter(Boolean))) as string[];
+      const first = corrs[issueIdxs[0]];
+      const expl = first?.explanation_en || '';
+      const label = types.length ? types.join(', ') : 'other';
+      return expl ? `${label} — ${expl}` : label;
+    });
+    return titles;
+  }, [diffData, result]);
 
   const onCheck = async () => {
     if (loading || cooling || !text.trim()) return;
@@ -75,46 +106,85 @@ export default function App() {
   };
 
   const onIssueClick = (i: number) => {
-    const id = `issue-${i}`;
-    const el = document.getElementById(id) as HTMLElement | null;
-    if (el) {
-      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
-      const prevOutline = el.style.outline;
-      el.style.outline = '2px solid rgba(255,255,255,0.6)';
-      setTimeout(() => { el.style.outline = prevOutline; }, 700);
-    }
-    // Select same span in textarea only if raw text matches canonical exactly (avoids CRLF/LF index drift)
-    const c = result?.corrections?.[i];
-    if (c && rawMatchesCanonical && textAreaRef.current) {
-      try {
-        textAreaRef.current.focus();
-        textAreaRef.current.setSelectionRange(c.start, c.end);
-      } catch {}
+    const hunkId = diffData?.issueToHunk?.[i] ?? null;
+    if (hunkId != null) {
+      const id = `hunk-${hunkId}`;
+      const el = document.getElementById(id) as HTMLElement | null;
+      if (el) {
+        try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+        const prevOutline = el.style.outline;
+        el.style.outline = '2px solid rgba(255,255,255,0.6)';
+        setTimeout(() => { el.style.outline = prevOutline; }, 700);
+      }
+      // Select same span in textarea only if normalized live text equals canonical
+      if (matchesCanonicalNormalized && textAreaRef.current && diffData) {
+        const r = diffData.hunkRanges[hunkId];
+        try {
+          textAreaRef.current.focus();
+          textAreaRef.current.setSelectionRange(r.start, r.end);
+        } catch {}
+      }
+    } else {
+      // eslint-disable-next-line no-console
+      console.log('Issue unplaced (no attached diff hunk)', { i });
     }
   };
 
-  // Runtime invariant checks for indices against canonical string
+  // Model-index invariant checks removed; diff guardrails are below.
+
+  // Stability guardrails: assert diff spans are in-bounds and non-overlapping
   useEffect(() => {
-    if (!result || !canonical) return;
-    const corr = result.corrections || [];
+    if (!diffData || !canonical) return;
+    const spans = diffData.spans || [];
     const len = canonical.length;
-    for (let i = 0; i < corr.length; i++) {
-      const c = corr[i];
-      if (!(Number.isInteger(c.start) && Number.isInteger(c.end) && c.start >= 0 && c.end >= c.start && c.end <= len)) {
+    let lastEnd = 0;
+    for (let i = 0; i < spans.length; i++) {
+      const s = spans[i];
+      if (!(Number.isInteger(s.start) && Number.isInteger(s.end) && s.start >= 0 && s.end >= s.start && s.end <= len)) {
         // eslint-disable-next-line no-console
-        console.warn('Span out of bounds', { i, c, len });
+        console.warn('[diff] span out of bounds', { i, s, len });
       }
-      if (i > 0 && c.start < corr[i - 1].end) {
+      if (i > 0 && s.start < lastEnd) {
         // eslint-disable-next-line no-console
-        console.warn('Overlapping spans', { prev: corr[i - 1], curr: c });
+        console.warn('[diff] overlapping spans', { prev: spans[i - 1], curr: s });
       }
-      const sub = canonical.slice(c.start, c.end);
-      if (sub !== c.original) {
-        // eslint-disable-next-line no-console
-        console.warn('Original mismatch', { i, start: c.start, end: c.end, expected: c.original, got: sub });
-      }
+      lastEnd = s.end;
     }
-  }, [result, canonical]);
+  }, [diffData, canonical]);
+  // Stability guardrails: assert diff spans are in-bounds and non-overlapping
+  useEffect(() => {
+    if (!diffData || !canonical) return;
+    const spans = diffData.spans || [];
+    const len = canonical.length;
+    let lastEnd = 0;
+    for (let i = 0; i < spans.length; i++) {
+      const s = spans[i];
+      if (!(Number.isInteger(s.start) && Number.isInteger(s.end) && s.start >= 0 && s.end >= s.start && s.end <= len)) {
+        // eslint-disable-next-line no-console
+        console.warn('[diff] span out of bounds', { i, s, len });
+      }
+      if (i > 0 && s.start < lastEnd) {
+        // eslint-disable-next-line no-console
+        console.warn('[diff] overlapping spans', { prev: spans[i - 1], curr: s });
+      }
+      lastEnd = s.end;
+    }
+  }, [diffData, canonical]);
+
+  // Diagnostics: one console summary per check
+  useEffect(() => {
+    if (!diffData) return;
+    try {
+      const d = diffData.diagnostics;
+      // eslint-disable-next-line no-console
+      const total = (result?.corrections?.length ?? 0);
+      console.log(`[diff] hunks=${d.totalHunks} highlights=${d.highlightedHunks} issues=${total} attached=${d.attachedIssues} unplaced=${d.unplacedIssues}`);
+      if (d.unplacedSamples?.length) {
+        // eslint-disable-next-line no-console
+        console.log('[diff] unplaced samples', d.unplacedSamples);
+      }
+    } catch {}
+  }, [diffData, result]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -156,10 +226,16 @@ export default function App() {
                 )}
               </div>
               <div className="min-h-24 p-3 rounded-md bg-slate-900 border border-slate-700">
-                {result?.corrections?.length
-                  ? <HighlightedPreview textNFC={canonical} corrections={result.corrections as any} />
-                  : <span className="text-slate-400 text-sm">{text.trim() ? 'No issues to highlight.' : '—'}</span>
-                }
+                {diffData?.spans?.length ? (
+                  <HighlightedPreview
+                    textNFC={canonical}
+                    corrections={diffData.spans as any}
+                    idPrefix="hunk-"
+                    titlesByIndex={diffTitles as any}
+                  />
+                ) : (
+                  <span className="text-slate-400 text-sm">{text.trim() ? 'No issues to highlight.' : '—'}</span>
+                )}
               </div>
               <div className="flex flex-wrap gap-2 text-[11px] text-slate-300">
                 <span className="px-1 rounded bg-red-500/30 underline decoration-red-400">spelling</span>
@@ -199,14 +275,27 @@ export default function App() {
           <h2 className="font-semibold">Issues</h2>
           <div className="grid gap-2 md:grid-cols-2">
             {result?.corrections?.length
-              ? result.corrections.map((c, i) => (
-                  <div key={i} onClick={() => onIssueClick(i)} className="border border-slate-700 rounded-md p-2 cursor-pointer hover:bg-slate-800">
-                    <div className="text-xs text-slate-400">{c.type.toUpperCase()} • {Math.round((c.confidence ?? 0)*100)}%</div>
-                    <div><strong>{c.original}</strong> → <span className="text-emerald-300">{c.suggestion}</span></div>
-                    <div className="text-xs text-slate-400">{c.explanation_en}</div>
-                    <div className="text-[10px] text-slate-500">[{c.start}, {c.end})</div>
-                  </div>
-                ))
+              ? result.corrections.map((c, i) => {
+                  const attachedHunk = diffData?.issueToHunk?.[i];
+                  const controlsId = attachedHunk != null ? `hunk-${attachedHunk}` : undefined;
+                  return (
+                    <div
+                      key={i}
+                      role="button"
+                      tabIndex={0}
+                      aria-controls={controlsId}
+                      onClick={() => onIssueClick(i)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onIssueClick(i); }
+                      }}
+                      className="border border-slate-700 rounded-md p-2 cursor-pointer hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+                    >
+                      <div className="text-xs text-slate-400">{c.type.toUpperCase()} • {Math.round((c.confidence ?? 0)*100)}%</div>
+                      <div><strong>{c.original}</strong> → <span className="text-emerald-300">{c.suggestion}</span></div>
+                      <div className="text-xs text-slate-400">{c.explanation_en}</div>
+                    </div>
+                  );
+                })
               : <div className="text-slate-400 text-sm">No issues found.</div>
             }
           </div>
