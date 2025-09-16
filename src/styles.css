@@ -2,9 +2,79 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Minimal custom tweaks for readability, placed in the base layer */
+/* Brand tokens and warm light theme */
 @layer base {
   :root {
-    color-scheme: dark;
+    /* HSL component values (no hsl() wrapper) */
+    --brand-orange: 17 100% 54%; /* #FF5913 */
+    --brand-teal: 165 77% 47%;   /* #1DD3B0 */
+    --brand-warm: 39 33% 95%;    /* #F7F4EE */
+    --brand-dark: 240 5% 12%;    /* #1E1E1E */
+  }
+
+  html, body, #root {
+    height: 100%;
+  }
+
+  body {
+    color-scheme: light;
+    font-family: "Kumbh Sans", system-ui, ui-sans-serif, sans-serif;
+    background-color: hsl(var(--brand-warm));
+    color: hsl(var(--brand-dark));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3 {
+    letter-spacing: -0.01em;
+  }
+
+  /* Subtle scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(30,30,30,0.3) transparent;
+  }
+  *::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: rgba(30,30,30,0.25);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Animated Multi-Gradient Text Effect */
+  .animated-gradient-text {
+    background: linear-gradient(
+      45deg,
+      #2f0bff, /* Deep blue */
+      #f70aff, /* Vibrant purple */
+      #ff0000, /* Reddish pink */
+      #e100ff, /* Magenta hue */
+      #ff6600, /* Dark orange */
+      #0099ff, /* Darker blue */
+      #b909ff, /* Deep purple */
+      #ff0000, /* Dark red */
+      #ff006a, /* Dark magenta */
+      #ff4000  /* Darker orange */
+    );
+    background-size: 400% 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientShift 4s ease-in-out infinite;
+  }
+
+  @keyframes gradientShift {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
   }
 }
