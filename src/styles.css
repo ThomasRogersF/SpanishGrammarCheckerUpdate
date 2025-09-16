@@ -46,4 +46,35 @@
   *::-webkit-scrollbar-track {
     background: transparent;
   }
+
+  /* Animated Multi-Gradient Text Effect */
+  .animated-gradient-text {
+    background: linear-gradient(
+      45deg,
+      #2f0bff, /* Deep blue */
+      #f70aff, /* Vibrant purple */
+      #ff0000, /* Reddish pink */
+      #e100ff, /* Magenta hue */
+      #ff6600, /* Dark orange */
+      #0099ff, /* Darker blue */
+      #b909ff, /* Deep purple */
+      #ff0000, /* Dark red */
+      #ff006a, /* Dark magenta */
+      #ff4000  /* Darker orange */
+    );
+    background-size: 400% 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientShift 4s ease-in-out infinite;
+  }
+
+  @keyframes gradientShift {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
 }

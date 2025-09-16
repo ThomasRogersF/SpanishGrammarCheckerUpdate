@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Wand2, Copy, Trash2, Loader2, CheckCircle, AlertTriangle, FileText, Sparkles } from 'lucide-react';
+import { Wand2, Copy, Trash2, Loader2, CheckCircle, AlertTriangle, FileText} from 'lucide-react';
 import HighlightedPreview from './components/HighlightedPreview';
 import { normalizeForCanonical } from './utils/text';
+import GrammarCheckerSection from './components/GrammarCheckerSection';
+import MasterSpanishSection from './components/MasterSpanishSection';
 import { buildDiffHighlights } from './utils/diff';
 
 type Correction = {
@@ -38,6 +40,7 @@ export default function App() {
   const [coolingUntil, setCoolingUntil] = useState<number>(0);
   const [error, setError] = useState<string|null>(null);
   const [result, setResult] = useState<CheckResponse|null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string>('');
 
   const now = Date.now();
   const cooling = useMemo(() => now < coolingUntil, [now, coolingUntil]);
@@ -56,6 +59,27 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onCopy = async () => {
+    const textToCopy = result?.corrected_text || text;
+    if (!textToCopy.trim()) return;
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopyFeedback('Copied!');
+      setTimeout(() => setCopyFeedback(''), 2000);
+    } catch (e) {
+      setCopyFeedback('Failed to copy');
+      setTimeout(() => setCopyFeedback(''), 2000);
+    }
+  };
+
+  const onClear = () => {
+    setText('');
+    setResult(null);
+    setError(null);
+    setCopyFeedback('');
   };
 
   const wordCount = useMemo(() => (text.trim() ? text.trim().split(/\s+/).length : 0), [text]);
@@ -101,10 +125,15 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-7xl px-6 py-8 space-y-8">
-        <header className="flex flex-col items-center text-center gap-3 animate-fadeIn">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-white grid place-items-center font-bold">SV</div>
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">SpanishVIP Grammar Checker</h1>
-          <p className="text-base md:text-lg text-neutral-600">Corrige gramática, ortografía y estilo con una interfaz cálida y moderna.</p>
+        <header className="flex flex-col items-center text-center gap-4 animate-fadeIn">
+          <div className="flex flex-col items-center gap-4 mb-2">
+            <img src="/Images/logo.png" alt="SpanishVIP Logo" className="h-16 w-64 md:h-20 md:w-80" />
+            <h1 className="text-3xl md:text-4xl font-bold">
+              <span className="text-orange-600">SpanishVIP</span>{' '}
+              <span className="animated-gradient-text">AI Grammar Checker✨</span>
+            </h1>
+          </div>
+          <p className="text-base md:text-lg text-neutral-600">Correct grammar, spelling, and style with a warm and modern interface.</p>
         </header>
 
         <main className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -114,61 +143,63 @@ export default function App() {
                 onClick={onCheck}
                 disabled={loading || cooling || !text.trim()}
                 className="inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-orange-500 to-red-500 text-white px-5 py-3 shadow-soft hover:shadow-lg transition disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50"
-                aria-label="Corregir mi texto"
+                aria-label="Correct my text"
               >
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spinSoft" />
-                    Procesando…
+                    Processing…
                   </>
                 ) : (
                   <>
                     <Wand2 className="h-4 w-4" />
-                    Corregir mi texto
+                    Correct my text
                   </>
                 )}
               </button>
 
               <button
-                disabled
-                className="inline-flex items-center gap-2 rounded-pill border border-orange-200 text-orange-700 px-4 py-2 bg-white hover:bg-orange-50 transition opacity-60 cursor-not-allowed"
-                aria-disabled="true"
+                onClick={onCopy}
+                disabled={!text.trim() && !result?.corrected_text}
+                className="inline-flex items-center gap-2 rounded-pill border border-orange-200 text-orange-700 px-4 py-2 bg-white hover:bg-orange-50 transition disabled:opacity-50 disabled:pointer-events-none"
+                aria-label="Copy text"
               >
                 <Copy className="h-4 w-4" />
-                Copiar
+                {copyFeedback || 'Copy'}
               </button>
               <button
-                disabled
-                className="inline-flex items-center gap-2 rounded-pill border border-orange-200 text-orange-700 px-4 py-2 bg-white hover:bg-orange-50 transition opacity-60 cursor-not-allowed"
-                aria-disabled="true"
+                onClick={onClear}
+                disabled={!text.trim()}
+                className="inline-flex items-center gap-2 rounded-pill border border-orange-200 text-orange-700 px-4 py-2 bg-white hover:bg-orange-50 transition disabled:opacity-50 disabled:pointer-events-none"
+                aria-label="Clear text"
               >
                 <Trash2 className="h-4 w-4" />
-                Limpiar
+                Clear
               </button>
 
-              <span className="ml-auto text-xs text-neutral-500">{cooling ? 'Enfriando…' : ''}</span>
+              <span className="ml-auto text-xs text-neutral-500">{cooling ? 'Cooling…' : ''}</span>
             </div>
 
             <div className="mt-4 space-y-2">
-              <label className="text-sm text-neutral-700">Pega tu texto en español</label>
+              <label className="text-sm text-neutral-700">Paste your text in Spanish</label>
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 maxLength={3000}
                 className="w-full min-h-[400px] p-4 rounded-card bg-white/50 border border-neutral-200/70 outline-none focus:ring-2 focus:ring-orange-500/50 placeholder:text-neutral-400 text-base leading-relaxed"
-                placeholder="Escribe aquí…"
+                placeholder="Write here…"
               />
               {error && <div className="text-sm text-red-600">{error}</div>}
 
-              <div className="mt-4 pt-4 border-t border-neutral-200/70 flex items-center justify-between text-sm text-neutral-600">
+              <div className="mt-4 pt-4 border-t border-neutral-200/70 flex flex-col sm:flex-row items-center justify-between text-sm text-neutral-600">
                 <div className="flex items-center gap-3">
                   <span className="inline-flex items-center gap-1"><FileText className="h-4 w-4" /> {text.length}/3000</span>
-                  <span className="inline-flex items-center gap-1"><AlertTriangle className="h-4 w-4 text-orange-600" /> {wordCount} palabras</span>
+                  <span className="inline-flex items-center gap-1"><AlertTriangle className="h-4 w-4 text-orange-600" /> {wordCount} words</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs">Ortografía {typeCounts['spelling'] || 0}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs">Gramática {typeCounts['grammar'] || 0}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs">Puntuación {typeCounts['punctuation'] || 0}</span>
+                <div className="flex flex-row flex-wrap items-center gap-2 sm:gap-3">
+                  <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs">Spelling {typeCounts['spelling'] || 0}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs">Grammar {typeCounts['grammar'] || 0}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs">Punctuation {typeCounts['punctuation'] || 0}</span>
                 </div>
               </div>
             </div>
@@ -179,7 +210,7 @@ export default function App() {
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-lg flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-600" />
-                  Correcciones
+                  Corrections
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-700">{totalIssues}</span>
               </div>
@@ -196,37 +227,24 @@ export default function App() {
                   : (
                     <div className="flex flex-col items-center justify-center py-8 text-center text-neutral-600">
                       <CheckCircle className="h-12 w-12 text-green-600 mb-2" />
-                      <div className="font-semibold">¡No se encontraron errores!</div>
-                      <div className="text-sm">Tu texto luce excelente.</div>
+                      <div className="font-semibold">No errors found!</div>
+                      <div className="text-sm">Your text looks excellent.</div>
                     </div>
                   )
                 }
               </div>
             </div>
 
-            {result?.fluency?.alternatives?.length ? (
-              <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-card shadow-lg p-6 border-l-4 border-orange-400">
-                <div className="flex items-center gap-2 text-orange-700 font-semibold mb-2">
-                  <Sparkles className="h-5 w-5" />
-                  Recomendación
-                </div>
-                <div className="bg-white rounded-card p-3 text-neutral-900 mb-2">
-                  {result!.fluency.alternatives[0].suggestion}
-                </div>
-                <div className="text-sm text-orange-700">
-                  {result!.fluency.alternatives[0].explanation_en}
-                </div>
-              </div>
-            ) : null}
+           
           </aside>
         </main>
 
         {/* Highlighted Preview (restored) */}
         <section className="rounded-card bg-white/80 backdrop-blur-sm shadow-lg p-6 animate-fadeIn">
           <div className="flex items-center gap-2 mb-2">
-            <h2 className="font-semibold text-lg">Vista previa resaltada</h2>
+            <h2 className="font-semibold text-lg">Highlighted preview</h2>
             {(!result?.corrections?.length && text.trim()) ? (
-              <span className="text-xs text-neutral-500">Sin problemas detectados</span>
+              <span className="text-xs text-neutral-500">No problems detected</span>
             ) : null}
           </div>
           <div className="min-h-24 p-3 rounded-card bg-white border border-neutral-200">
@@ -242,22 +260,22 @@ export default function App() {
             )}
           </div>
           <div className="flex flex-wrap gap-2 text-[11px] text-neutral-700 mt-2">
-            <span className="px-2 py-0.5 rounded-full bg-red-100 border border-red-200">ortografía</span>
-            <span className="px-2 py-0.5 rounded-full bg-yellow-100 border border-yellow-200">gramática</span>
-            <span className="px-2 py-0.5 rounded-full bg-blue-100 border border-blue-200">puntuación</span>
-            <span className="px-2 py-0.5 rounded-full bg-purple-100 border border-purple-200">concordancia</span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200">acentos</span>
-            <span className="px-2 py-0.5 rounded-full bg-pink-100 border border-pink-200">diacríticos</span>
-            <span className="px-2 py-0.5 rounded-full bg-neutral-100 border border-neutral-200">otros</span>
+            <span className="px-2 py-0.5 rounded-full bg-red-100 border border-red-200">spelling</span>
+            <span className="px-2 py-0.5 rounded-full bg-yellow-100 border border-yellow-200">grammar</span>
+            <span className="px-2 py-0.5 rounded-full bg-blue-100 border border-blue-200">punctuation</span>
+            <span className="px-2 py-0.5 rounded-full bg-purple-100 border border-purple-200">agreement</span>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200">accents</span>
+            <span className="px-2 py-0.5 rounded-full bg-pink-100 border border-pink-200">diacritics</span>
+            <span className="px-2 py-0.5 rounded-full bg-neutral-100 border border-neutral-200">other</span>
           </div>
         </section>
 
-        <section className="rounded-card bg-white/80 backdrop-blur-sm shadow-lg p-6 animate-fadeIn">
-          <h2 className="font-semibold text-lg mb-2">Texto corregido</h2>
+        <section className="rounded-card bg-gradient-to-r from-orange-50 to-red-50 shadow-lg p-6 animate-fadeIn">
+          <h2 className="font-semibold text-lg mb-2">Corrected text</h2>
           <div className="min-h-24 p-3 rounded-card bg-white border border-neutral-200">
             {result?.corrected_text || <span className="text-neutral-400 text-sm">—</span>}
           </div>
-          <h2 className="font-semibold text-lg mt-6 mb-2">Alternativas de fluidez</h2>
+          <h2 className="font-semibold text-lg mt-6 mb-2">Fluency alternatives</h2>
           <div className="space-y-2">
             {result?.fluency?.alternatives?.length
               ? result.fluency.alternatives.map((a, i) => (
@@ -267,19 +285,14 @@ export default function App() {
                     <div className="text-xs text-orange-700">{a.explanation_en}</div>
                   </div>
                 ))
-              : <div className="text-neutral-500 text-sm">No hay sugerencias adicionales.</div>
+              : <div className="text-neutral-500 text-sm">No additional suggestions.</div>
             }
           </div>
         </section>
 
-        <section className="rounded-card bg-white/80 backdrop-blur-sm shadow-lg p-6 animate-fadeIn">
-          <h3 className="text-lg font-semibold mb-2">¿Por qué SpanishVIP?</h3>
-          <div className="grid sm:grid-cols-3 gap-4 text-sm text-neutral-700">
-            <div className="p-4 rounded-card border border-neutral-200 bg-white">Aprende con ejemplos claros.</div>
-            <div className="p-4 rounded-card border border-neutral-200 bg-white">Interfaz cálida y accesible.</div>
-            <div className="p-4 rounded-card border border-neutral-200 bg-white">Correcciones precisas y rápidas.</div>
-          </div>
-        </section>
+
+        <GrammarCheckerSection />
+        <MasterSpanishSection />
       </div>
     </div>
   );
