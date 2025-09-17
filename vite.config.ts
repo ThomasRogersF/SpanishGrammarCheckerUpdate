@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
+import type { Express } from 'express';
 
 // Dev inline API plugin using Express, loading env from .env.local.
 // Avoids vite-plugin-mix (incompatible with Vite v7).
@@ -22,24 +23,23 @@ export default defineConfig({
         dotenvMod.config({ path: '.env.local' });
 
         const expressMod = await import('express');
-        const expressApp = expressMod.default();
+        const expressApp: Express = expressMod.default();
 
-        // Mount our API routes (prefer JS to avoid TS loader issues in Node)
-        let mount: any = null;
+        // Mount dev API routes from dev/mount-api.js (outside /api to avoid Vercel conflicts)
+        let mount: ((app: Express) => void) | null = null;
         try {
-          const mod = await import('./api/index.js');
-          mount = (mod as any).default ?? mod;
-        } catch {
-          // Fallback to TS if JS not found and environment supports it
-          const mod = await import('./api/index.ts');
-          mount = (mod as any).default ?? mod;
+          const mod = await import('./dev/mount-api.js');
+          mount = mod.default ?? mod;
+        } catch (e) {
+          // No dev mount available; skip mounting
+          mount = null;
         }
         if (typeof mount === 'function') {
-          mount(expressApp as any);
+          mount(expressApp);
         }
 
         // Attach Express as a middleware under Vite dev server
-        server.middlewares.use(expressApp as any);
+        server.middlewares.use(expressApp);
       },
     },
   ],

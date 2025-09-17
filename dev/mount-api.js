@@ -1,5 +1,5 @@
-// ESM module used by Vite dev server plugin (configureServer) to mount /api/*
-// Mirrors the TypeScript version but without types to run directly in Node.
+// Dev-only Express mount used by Vite plugin to serve /api locally.
+// This file was moved out of /api to avoid Vercel deployment conflicts.
 
 import bodyParser from 'body-parser';
 import Ajv from 'ajv';
