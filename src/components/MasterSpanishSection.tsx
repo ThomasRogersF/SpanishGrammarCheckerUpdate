@@ -214,7 +214,7 @@ export default function MasterSpanishSection() {
             {Array.from({ length: totalSlides }).map((_, slideIndex) => (
               <div
                 key={slideIndex}
-                className="flex-shrink-0 w-full px-4"
+                className="flex-shrink-0 w-full px-1"
               >
                 <div className={`grid ${isMobile ? 'grid-cols-1 gap-8 px-2' : 'grid-cols-3 gap-6'}`}>
                   {testimonials
