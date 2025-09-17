@@ -70,7 +70,7 @@ export default function App() {
       setCopyFeedback('Copied!');
       setTimeout(() => setCopyFeedback(''), 2000);
     } catch (e) {
-      setCopyFeedback('Failed to copy');
+      setCopyFeedback('Copy failed');
       setTimeout(() => setCopyFeedback(''), 2000);
     }
   };
@@ -136,10 +136,10 @@ export default function App() {
             </button>
             <h1 className="text-3xl md:text-4xl font-bold">
               <span className="text-orange-600">SpanishVIP</span>{' '}
-              <span className="animated-gradient-text">AI Grammar Checker✨</span>
+              <span className="animated-gradient-text">Grammar Checker (Free) — Fix Grammar, Spelling & Accents</span>
             </h1>
           </div>
-          <p className="text-base md:text-lg text-neutral-600">Correct grammar, spelling, and style with a warm and modern interface.</p>
+          <p className="text-base md:text-lg text-neutral-600">AI-powered checker that fixes grammar, spelling, punctuation, accents, and agreement — plus native-style rewrites.</p>
         </header>
 
         <main className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -149,17 +149,17 @@ export default function App() {
                 onClick={onCheck}
                 disabled={loading || cooling || !text.trim()}
                 className="inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-orange-500 to-red-500 text-white px-5 py-3 shadow-soft hover:shadow-lg transition disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50"
-                aria-label="Correct my text"
+                aria-label="Check my Spanish"
               >
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spinSoft" />
-                    Processing…
+                    Checking…
                   </>
                 ) : (
                   <>
                     <Wand2 className="h-4 w-4" />
-                    Correct my text
+                    Check my Spanish
                   </>
                 )}
               </button>
@@ -183,23 +183,23 @@ export default function App() {
                 Clear
               </button>
 
-              <span className="ml-auto text-xs text-neutral-500">{cooling ? 'Cooling…' : ''}</span>
+              <span className="ml-auto text-xs text-neutral-500">{cooling ? 'Too many requests — cooling down. Please try again in a few seconds.' : ''}</span>
             </div>
 
             <div className="mt-4 space-y-2">
-              <label className="text-sm text-neutral-700">Paste your text in Spanish</label>
+              <label className="text-sm text-neutral-700">Paste or type your Spanish text</label>
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 maxLength={3000}
                 className="w-full min-h-[400px] p-4 rounded-card bg-white/50 border border-neutral-200/70 outline-none focus:ring-2 focus:ring-orange-500/50 placeholder:text-neutral-400 text-base leading-relaxed"
-                placeholder="Write here…"
+                placeholder="Write here… (up to 3,000 characters)"
               />
               {error && <div className="text-sm text-red-600">{error}</div>}
 
               <div className="mt-4 pt-4 border-t border-neutral-200/70 flex flex-col sm:flex-row items-center justify-between text-sm text-neutral-600">
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center gap-1"><FileText className="h-4 w-4" /> {text.length}/3000</span>
+                  <span className="inline-flex items-center gap-1"><FileText className="h-4 w-4" /> {text.length}/3000 characters</span>
                   <span className="inline-flex items-center gap-1"><AlertTriangle className="h-4 w-4 text-orange-600" /> {wordCount} words</span>
                 </div>
                 <div className="flex flex-row flex-wrap items-center gap-2 sm:gap-3">
@@ -233,7 +233,7 @@ export default function App() {
                   : (
                     <div className="flex flex-col items-center justify-center py-8 text-center text-neutral-600">
                       <CheckCircle className="h-12 w-12 text-green-600 mb-2" />
-                      <div className="font-semibold">No errors found!</div>
+                      <div className="font-semibold">No errors — your text looks excellent.</div>
                       <div className="text-sm">Your text looks excellent.</div>
                     </div>
                   )
@@ -250,7 +250,7 @@ export default function App() {
           <div className="flex items-center gap-2 mb-2">
             <h2 className="font-semibold text-lg">Highlighted preview</h2>
             {(!result?.corrections?.length && text.trim()) ? (
-              <span className="text-xs text-neutral-500">No problems detected</span>
+              <span className="text-xs text-neutral-500">No issues detected.</span>
             ) : null}
           </div>
           <div className="min-h-24 p-3 rounded-card bg-white border border-neutral-200">
@@ -281,7 +281,7 @@ export default function App() {
           <div className="min-h-24 p-3 rounded-card bg-white border border-neutral-200">
             {result?.corrected_text || <span className="text-neutral-400 text-sm">—</span>}
           </div>
-          <h2 className="font-semibold text-lg mt-6 mb-2">Fluency alternatives</h2>
+          <h2 className="font-semibold text-lg mt-6 mb-2">Sound more natural (native-style rewrites)</h2>
           <div className="space-y-2">
             {result?.fluency?.alternatives?.length
               ? result.fluency.alternatives.map((a, i) => (

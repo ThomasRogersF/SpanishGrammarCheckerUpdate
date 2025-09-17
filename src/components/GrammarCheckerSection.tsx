@@ -4,26 +4,26 @@ const features = [
   {
     icon: Zap,
     iconColor: 'text-orange-600',
-    title: 'Real-Time Correction',
-    description: 'Get instant feedback while you write with our advanced AI',
+    title: 'Real-time correction',
+    description: 'Instant feedback as you write with advanced AI',
   },
   {
     icon: CheckCircle,
     iconColor: 'text-green-600',
-    title: 'Spelling & Grammar Correction',
-    description: 'Automatically fix errors with a single click',
+    title: 'One-click fixes',
+    description: 'Automatically apply grammar and spelling corrections',
   },
   {
     icon: Users,
     iconColor: 'text-red-600',
-    title: 'Native Speaker Recommendations',
-    description: 'Learn how natives would naturally express your ideas',
+    title: 'Native-style rewrites',
+    description: 'See how a native would express your idea',
   },
   {
     icon: Star,
     iconColor: 'text-yellow-600',
-    title: 'Fluency Focus',
-    description: 'Not just correct grammar, but Spanish that sounds natural',
+    title: 'Fluency focus',
+    description: 'Beyond correctness: Spanish that sounds natural',
   },
 ];
 
@@ -35,7 +35,7 @@ export default function GrammarCheckerSection() {
           Professional Spanish Grammar Checker
         </h2>
         <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-          Our advanced AI tool helps you write perfect Spanish by detecting and correcting grammar, spelling, and style errors in real-time. Get native speaker recommendations to improve your fluency and sound more natural.
+          Detect and fix grammar, spelling, punctuation, accents, and agreement in real time — with native-style suggestions to boost fluency.
         </p>
       </div>
 

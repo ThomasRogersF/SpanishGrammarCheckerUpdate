@@ -167,10 +167,10 @@ export default function MasterSpanishSection() {
     <section className="bg-gradient-to-br from-orange-50 to-red-100 rounded-2xl p-8 my-16">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-4">
-          Ready to Master Spanish?
+          Ready to master Spanish?
         </h2>
         <p className="text-lg text-gray-700 max-w-2xl mx-auto">
-          Join thousands of students who have transformed their Spanish with SpanishVIP's personalized 1-on-1 classes. Learn from native speakers at your own pace.
+          Join thousands who improved faster with SpanishVIP’s personalized 1-on-1 classes. Learn with native teachers on your schedule.
         </p>
       </div>
 
@@ -351,12 +351,12 @@ export default function MasterSpanishSection() {
         <button
           onClick={() => window.parent.postMessage({ action: 'redirect', url: 'https://spanishvip.com/free-class/' }, '*')}
           className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-8 py-3 text-lg font-semibold rounded-lg transition"
-          aria-label="Start learning Spanish today"
+          aria-label="Start learning today"
         >
-          Start Learning Spanish Today
+          Start learning today
         </button>
         <p className="text-sm text-gray-600 mt-2">
-          Free trial class • No credit card • Cancel anytime
+          Free trial • No credit card • Cancel anytime
         </p>
       </div>
     </section>
