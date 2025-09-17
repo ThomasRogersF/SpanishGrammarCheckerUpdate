@@ -136,8 +136,9 @@ export default function App() {
             </button>
             <h1 className="text-3xl md:text-4xl font-bold">
               <span className="text-orange-600">SpanishVIP</span>{' '}
-              <span className="animated-gradient-text">Grammar Checker (Free) — Fix Grammar, Spelling & Accents</span>
+              <span className="animated-gradient-text">AI Grammar Checker✨</span>
             </h1>
+            <h2 className="text-3xl md:text-md font-bold">Fix Grammar, Spelling & Accents</h2>
           </div>
           <p className="text-base md:text-lg text-neutral-600">AI-powered checker that fixes grammar, spelling, punctuation, accents, and agreement — plus native-style rewrites.</p>
         </header>
