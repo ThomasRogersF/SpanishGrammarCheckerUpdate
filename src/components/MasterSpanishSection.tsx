@@ -348,7 +348,11 @@ export default function MasterSpanishSection() {
       )}
 
       <div className="text-center">
-        <button className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-8 py-3 text-lg font-semibold rounded-lg transition">
+        <button
+          onClick={() => window.parent.postMessage({ action: 'redirect', url: 'https://spanishvip.com/free-class/' }, '*')}
+          className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-8 py-3 text-lg font-semibold rounded-lg transition"
+          aria-label="Start learning Spanish today"
+        >
           Start Learning Spanish Today
         </button>
         <p className="text-sm text-gray-600 mt-2">

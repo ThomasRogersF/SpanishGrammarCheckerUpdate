@@ -127,7 +127,13 @@ export default function App() {
       <div className="mx-auto max-w-7xl px-6 py-8 space-y-8">
         <header className="flex flex-col items-center text-center gap-4 animate-fadeIn">
           <div className="flex flex-col items-center gap-4 mb-2">
-            <img src="/Images/logo.png" alt="SpanishVIP Logo" className="h-16 w-64 md:h-20 md:w-80" />
+            <button
+              onClick={() => window.parent.postMessage({ action: 'redirect', url: 'https://spanishvip.com/' }, '*')}
+              className="cursor-pointer hover:opacity-90 transition-opacity"
+              aria-label="Go to SpanishVIP"
+            >
+              <img src="/Images/logo.png" alt="SpanishVIP Logo" className="h-16 w-64 md:h-20 md:w-80" />
+            </button>
             <h1 className="text-3xl md:text-4xl font-bold">
               <span className="text-orange-600">SpanishVIP</span>{' '}
               <span className="animated-gradient-text">AI Grammar Checker✨</span>
