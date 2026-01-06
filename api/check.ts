@@ -131,9 +131,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const KEY = process.env.GEMINI_API_KEY;
-    const MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-    if (!KEY) return res.status(500).json({ error: 'Missing GEMINI_API_KEY on server' });
+    const KEY = process.env.OPENROUTER_API_KEY;
+    const MODEL = process.env.OPENROUTER_MODEL || 'openai/gpt-4o';
+    if (!KEY) return res.status(500).json({ error: 'Missing OPENROUTER_API_KEY on server' });
 
     // Body parsing: support JSON object {text} or a raw string
     let input: string = '';
@@ -149,15 +149,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const nfc = toNFC(input);
     const prompt = buildPrompt(nfc);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent?key=${KEY}`;
+    const url = 'https://openrouter.ai/api/v1/chat/completions';
 
     const body = {
-      contents: [{ role: 'user', parts: [{ text: prompt }]}],
-      generationConfig: { response_mime_type: 'application/json' }
+      model: MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' }
     };
 
     const call = () => fetchWithTimeout(url, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
+      method: 'POST', headers: { 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     }, 15000);
 
@@ -166,11 +167,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await new Promise(s => setTimeout(s, 400));
       r = await call();
     }
-    if (!r.ok) return res.status(502).json({ error: `Gemini HTTP ${r.status}`, detail: await r.text() });
+    if (!r.ok) return res.status(502).json({ error: `OpenRouter HTTP ${r.status}`, detail: await r.text() });
 
     const data: any = await r.json();
-    const textPart = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    const obj = textPart ? extractFirstJson(textPart) : data;
+    const textPart = data?.choices?.[0]?.message?.content;
+    const obj = textPart ? JSON.parse(textPart) : data;
 
     const ajv = new Ajv({ allErrors: true, strict: false });
     addFormats(ajv);
